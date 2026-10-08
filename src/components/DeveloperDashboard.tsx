@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { api, ApiError, errMsg, type Profile, type ProposalWithProject } from "@/lib/api";
+import { api, ApiError, errMsg, type Profile, type ProjectMatch, type ProposalWithProject } from "@/lib/api";
 
 export default function DeveloperDashboard({ token }: { token: string }) {
   const [form, setForm] = useState({ headline: "", bio: "", skills: "", hourly_rate: 0 });
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [proposals, setProposals] = useState<ProposalWithProject[]>([]);
+  const [fits, setFits] = useState<ProjectMatch[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -21,6 +22,9 @@ export default function DeveloperDashboard({ token }: { token: string }) {
       if (pr) setForm({ headline: pr.headline, bio: pr.bio, skills: pr.skills.join(", "), hourly_rate: pr.hourly_rate });
       const d = await api<{ items: ProposalWithProject[] }>("/api/me/proposals", { token });
       setProposals(d.items ?? []);
+      // Suggestions are optional: matching may be switched off or the profile may be new.
+      const m = await api<{ items: ProjectMatch[] }>("/api/me/matches", { token }).catch(() => null);
+      setFits(m?.items ?? []);
     } catch (e) { setError(errMsg(e)); }
   }, [token]);
 
@@ -58,6 +62,18 @@ export default function DeveloperDashboard({ token }: { token: string }) {
         <label>Hourly rate<input type="number" min={0} value={form.hourly_rate} onChange={(e) => setForm({ ...form, hourly_rate: +e.target.value })} /></label>
         <button disabled={busy}>Save profile</button> {saved && <span className="muted">Saved</span>}
       </form>
+
+      {fits.length > 0 && (
+        <>
+          <h2>Projects that fit you</h2>
+          {fits.map((m) => (
+            <article key={m.id} className="card">
+              <h3><Link href={`/projects/${m.id}`}>{m.title}</Link></h3>
+              <p className="muted">{m.category || "uncategorized"} · {m.budget_min}–{m.budget_max} · similarity {m.score.toFixed(2)}</p>
+            </article>
+          ))}
+        </>
+      )}
 
       <h2>My proposals</h2>
       {proposals.length === 0 && <p className="muted">No proposals yet. <Link href="/">Browse open projects</Link> and send one from a project page.</p>}

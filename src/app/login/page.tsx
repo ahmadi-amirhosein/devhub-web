@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const body = mode === "login" ? { email, password } : { email, password, role };
       const r = await api<{ token: string; role: string }>(`/api/auth/${mode}`, { body });
-      login(r.token, r.role);
+      login(r.token, r.role, email.trim().toLowerCase());
       router.push("/dashboard");
     } catch (err) {
       setError(errMsg(err));

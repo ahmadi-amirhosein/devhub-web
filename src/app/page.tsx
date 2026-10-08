@@ -1,26 +1,44 @@
-import { BASE, type Project } from "@/lib/api";
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { api, ApiError, errMsg, type Project } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import ProjectCard from "@/components/ProjectCard";
 
-export const dynamic = "force-dynamic";
+export default function Home() {
+  const { token, ready, logout } = useAuth();
+  const [items, setItems] = useState<Project[] | null>(null);
+  const [error, setError] = useState("");
 
-async function load(category?: string): Promise<Project[] | null> {
-  try {
+  useEffect(() => {
+    if (!ready || !token) return;
+    const category = new URLSearchParams(window.location.search).get("category");
     const q = category ? `?category=${encodeURIComponent(category)}` : "";
-    const res = await fetch(`${BASE}/api/projects${q}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()).items ?? [];
-  } catch {
-    return null;
-  }
-}
+    api<{ items: Project[] }>(`/api/projects${q}`, { token })
+      .then((d) => setItems(d.items ?? []))
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) logout(); // expired token
+        else setError(errMsg(e));
+      });
+  }, [ready, token, logout]);
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
-  const { category } = await searchParams;
-  const items = await load(category);
+  if (!ready) return <p className="muted">Loading…</p>;
+
+  if (!token) {
+    return (
+      <section className="card narrow">
+        <h1>DevHub</h1>
+        <p>Describe your programming project, get an AI-structured spec, and find the right developer.</p>
+        <p className="muted">Projects are visible to members only.</p>
+        <Link href="/login">Log in or create an account</Link>
+      </section>
+    );
+  }
+
   return (
     <>
       <h1>Open projects</h1>
-      {items === null && <p className="error">Could not reach the API. Is the Go server running?</p>}
+      {error && <p className="error">{error}</p>}
       {items?.length === 0 && <p className="muted">No open projects yet.</p>}
       <div className="grid">{items?.map((p) => <ProjectCard key={p.id} p={p} />)}</div>
     </>

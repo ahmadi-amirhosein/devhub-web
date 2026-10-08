@@ -28,3 +28,6 @@ button.link { background:none; color:var(--accent); padding:0; }
 .sub { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
 .skills { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
 .skills span { font-size:12px; padding:2px 8px; border-radius:99px; border:1px solid var(--line); }
+.skills span.hit { color:#15803d; border-color:#15803d; }
+.who { display:flex; gap:8px; align-items:center; font-size:14px; }
+.who .email { max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); }

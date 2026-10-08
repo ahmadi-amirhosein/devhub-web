@@ -1,27 +1,32 @@
-import { notFound } from "next/navigation";
-import { BASE, type Project } from "@/lib/api";
+"use client";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { api, ApiError, errMsg, type Project } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import ProposalForm from "@/components/ProposalForm";
 
-export const dynamic = "force-dynamic";
+export default function ProjectPage() {
+  const { id } = useParams<{ id: string }>();
+  const { token, ready, logout } = useAuth();
+  const [p, setP] = useState<Project | null>(null);
+  const [error, setError] = useState("");
 
-async function load(id: string): Promise<Project | null> {
-  const res = await fetch(`${BASE}/api/projects/${id}`, { cache: "no-store" }).catch(() => null);
-  if (!res || !res.ok) return null;
-  return res.json();
-}
+  useEffect(() => {
+    if (!ready || !token) return;
+    api<Project>(`/api/projects/${id}`, { token })
+      .then(setP)
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) logout();
+        else setError(e instanceof ApiError && e.status === 404 ? "Project not found." : errMsg(e));
+      });
+  }, [ready, token, id, logout]);
 
-type Props = { params: Promise<{ id: string }> };
+  if (!ready) return <p className="muted">Loading…</p>;
+  if (!token) return <p><Link href="/login">Log in</Link> to view this project.</p>;
+  if (error) return <p className="error">{error}</p>;
+  if (!p) return <p className="muted">Loading…</p>;
 
-export async function generateMetadata({ params }: Props) {
-  const { id } = await params;
-  const p = await load(id);
-  return { title: p ? `${p.title} – DevHub` : "Project not found" };
-}
-
-export default async function ProjectPage({ params }: Props) {
-  const { id } = await params;
-  const p = await load(id);
-  if (!p) notFound();
   return (
     <article>
       <h1>{p.title}</h1>

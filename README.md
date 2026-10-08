@@ -10,12 +10,12 @@ Built with Next.js 16 (App Router), React 19 and TypeScript, with plain CSS and 
 
 | Route | Rendering | Purpose |
 |---|---|---|
-| `/` | server | open projects, `?category=` filter |
-| `/projects/[id]` | server | project page with the AI spec; developers can send a proposal here |
+| `/` | client | landing page for visitors; open projects (`?category=` filter) after login |
+| `/projects/[id]` | client | project page with the AI spec (login required); developers can send a proposal here |
 | `/login` | client | log in or register as client or developer |
-| `/dashboard` | client | clients: create, analyze, publish, review and accept proposals. Developers: profile and my proposals |
+| `/dashboard` | client | clients: create, analyze, publish, suggested developers, review and accept proposals. Developers: profile, projects that fit you, my proposals |
 
-The public pages are rendered on the server, so search engines can index projects and the page metadata is generated per project. The dashboard talks to the API from the browser.
+Projects are only visible to logged-in users, so every page that shows them fetches from the browser with the user's token. Visitors see a short landing page.
 
 ## Run it
 
@@ -40,14 +40,14 @@ src/lib/auth.tsx   auth context (token and role)
 
 ## Notes
 
-- **Next.js 16 and async params.** `params` and `searchParams` are promises in the App Router and are awaited in the server pages.
+- **Content is login-gated.** The token lives in the browser, so pages that show projects fetch on the client. If search-engine visibility matters later, add public teaser pages rendered on the server (title, category, budget only).
 - **Token storage is a known limitation.** The JWT is kept in `localStorage`, which any injected script could read. For production it should move to an httpOnly cookie set by the API.
 - **No tests yet.**
 
 ## Roadmap
 
 - httpOnly cookie authentication.
-- AI-suggested developers for each project, and suggested projects for developers (needs the backend matching work).
+- Explain why a developer or project was suggested, and let clients filter suggestions.
 - Messaging and milestones.
 - Screenshots and a short demo recording in this README.
 

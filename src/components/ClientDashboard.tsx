@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { api, errMsg, type Project, type ProposalWithDev } from "@/lib/api";
+import { api, errMsg, type DevMatch, type Project, type ProposalWithDev } from "@/lib/api";
 
 const emptyForm = { title: "", description: "", budget_min: 0, budget_max: 0 };
 
@@ -11,6 +11,7 @@ export default function ClientDashboard({ token }: { token: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [proposals, setProposals] = useState<Record<string, ProposalWithDev[]>>({});
+  const [matches, setMatches] = useState<Record<string, DevMatch[]>>({});
 
   const load = useCallback(async () => {
     try {
@@ -29,6 +30,16 @@ export default function ClientDashboard({ token }: { token: string }) {
   async function run(id: string, fn: () => Promise<unknown>) {
     setBusy(id); setError("");
     try { await fn(); await load(); } catch (e) { setError(errMsg(e)); } finally { setBusy(null); }
+  }
+
+  async function loadMatches(id: string) {
+    const d = await api<{ items: DevMatch[] }>(`/api/projects/${id}/matches`, { token });
+    setMatches((m) => ({ ...m, [id]: d.items ?? [] }));
+  }
+
+  function toggleMatches(id: string) {
+    if (matches[id]) setMatches(({ [id]: _removed, ...rest }) => rest);
+    else run(id, () => loadMatches(id));
   }
 
   function toggleProposals(id: string) {
@@ -82,6 +93,11 @@ export default function ClientDashboard({ token }: { token: string }) {
                 <button className="link" onClick={() => toggleProposals(p.id)}>
                   {proposals[p.id] ? "Hide proposals" : "Show proposals"}
                 </button>
+                {p.status === "open" && (
+                  <button className="link" onClick={() => toggleMatches(p.id)}>
+                    {matches[p.id] ? "Hide suggestions" : "Suggest developers"}
+                  </button>
+                )}
                 <Link href={`/projects/${p.id}`}>Public page</Link>
               </>
             )}
@@ -101,6 +117,24 @@ export default function ClientDashboard({ token }: { token: string }) {
                       await api(`/api/proposals/${pr.id}/accept`, { method: "POST", token });
                       await loadProposals(p.id);
                     })}>Accept this proposal</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {matches[p.id] && (
+            <div className="sub">
+              <b>Suggested developers</b>
+              {matches[p.id].length === 0 && <p className="muted">No developer profiles to compare yet.</p>}
+              {matches[p.id].map((m) => (
+                <div key={m.developer_id} className="sub">
+                  <b>{m.headline}</b> <span className="muted">· similarity {m.score.toFixed(2)} · {m.hourly_rate}/h</span>
+                  {m.bio && <p className="muted">{m.bio}</p>}
+                  <div className="skills">
+                    {m.skills.map((s) => <span key={s} className={(m.matched_skills ?? []).includes(s) ? "hit" : ""}>{s}</span>)}
+                  </div>
+                  {(m.matched_skills ?? []).length > 0 && (
+                    <p className="muted">Skills the project mentions: {m.matched_skills.join(", ")}</p>
                   )}
                 </div>
               ))}

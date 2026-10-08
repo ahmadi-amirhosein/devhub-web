@@ -40,3 +40,9 @@ export type ProposalWithDev = Proposal & {
   developer_headline: string; developer_skills: string[]; developer_hourly_rate: number;
 };
 export type ProposalWithProject = Proposal & { project_title: string };
+
+export type DevMatch = {
+  developer_id: string; headline: string; bio: string; skills: string[]; matched_skills: string[];
+  hourly_rate: number; score: number;
+};
+export type ProjectMatch = { id: string; title: string; category: string; budget_min: number; budget_max: number; score: number };
